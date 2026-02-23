@@ -83,6 +83,24 @@ class TestLLMObs:
         assert span.model == "mock-model"
         assert span.usage["total_tokens"] == 6
 
+    def test_generation_span_has_cost_for_known_model(self, mock_llm_obs_provider):
+        trace = mock_llm_obs_provider.create_trace("test")
+        span = trace.generation(
+            "llm_call",
+            model="gpt-4o-mini",
+            usage={"prompt_tokens": 1000, "completion_tokens": 200, "total_tokens": 1200},
+        )
+        assert span.cost_usd > 0.0
+
+    def test_generation_span_zero_cost_for_unknown_model(self, mock_llm_obs_provider):
+        trace = mock_llm_obs_provider.create_trace("test")
+        span = trace.generation(
+            "llm_call",
+            model="unknown-model-xyz",
+            usage={"prompt_tokens": 1000, "completion_tokens": 200, "total_tokens": 1200},
+        )
+        assert span.cost_usd == 0.0
+
     @pytest.mark.asyncio
     async def test_record_inference_helper(self, mock_llm_obs_provider):
         import platform_sdk.tier4_advanced.llm_obs as _obs

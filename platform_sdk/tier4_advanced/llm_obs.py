@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 from typing import Any, AsyncGenerator, Generator, Protocol, runtime_checkable
 
 from platform_sdk.tier0_core.logging import get_logger
+from platform_sdk.tier4_advanced.cost import estimate_llm_cost
 from platform_sdk.tier4_advanced.inference import InferenceResponse
 
 logger = get_logger()
@@ -110,6 +111,12 @@ class MockLLMTrace:
         usage: dict[str, int] | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> TraceSpan:
+        u = usage or {}
+        cost = estimate_llm_cost(
+            model or "",
+            prompt_tokens=u.get("prompt_tokens", 0),
+            completion_tokens=u.get("completion_tokens", 0),
+        )
         span = TraceSpan(
             trace_id=self.trace_id,
             span_id=str(uuid.uuid4()),
@@ -117,7 +124,8 @@ class MockLLMTrace:
             model=model,
             input=input,
             output=output,
-            usage=usage or {},
+            usage=u,
+            cost_usd=cost,
             metadata=metadata or {},
         )
         span.end()
@@ -225,18 +233,24 @@ class LangfuseTrace:
         usage: dict[str, int] | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> TraceSpan:
+        u = usage or {}
+        cost = estimate_llm_cost(
+            model or "",
+            prompt_tokens=u.get("prompt_tokens", 0),
+            completion_tokens=u.get("completion_tokens", 0),
+        )
         span_id = str(uuid.uuid4())
-        gen = self._trace.generation(
+        self._trace.generation(
             name=name,
             model=model,
             input=input,
             output=output,
             usage={
-                "input": (usage or {}).get("prompt_tokens", 0),
-                "output": (usage or {}).get("completion_tokens", 0),
-                "total": (usage or {}).get("total_tokens", 0),
-            } if usage else None,
-            metadata=metadata or {},
+                "input": u.get("prompt_tokens", 0),
+                "output": u.get("completion_tokens", 0),
+                "total": u.get("total_tokens", 0),
+            } if u else None,
+            metadata={**(metadata or {}), "cost_usd": cost},
         )
         return TraceSpan(
             trace_id=self._trace.id,
@@ -245,7 +259,8 @@ class LangfuseTrace:
             model=model,
             input=input,
             output=output,
-            usage=usage or {},
+            usage=u,
+            cost_usd=cost,
             metadata=metadata or {},
         )
 

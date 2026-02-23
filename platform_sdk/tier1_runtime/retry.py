@@ -22,6 +22,7 @@ from typing import Any, Type
 from tenacity import (
     AsyncRetrying,
     RetryError,
+    retry_if_exception,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
@@ -68,7 +69,10 @@ def retry_policy(
 
         @functools.wraps(fn)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
-            retry_on = retry_if_exception_type(tuple(on)) if on else retry_if_exception_type(Exception)
+            if on:
+                retry_on = retry_if_exception_type(tuple(on))
+            else:
+                retry_on = retry_if_exception(_is_retryable)
 
             async for attempt in AsyncRetrying(
                 stop=stop_after_attempt(max_attempts),
@@ -77,8 +81,6 @@ def retry_policy(
                 reraise=True,
             ):
                 with attempt:
-                    if not _is_retryable(Exception()) and not on:
-                        pass  # will be evaluated per-exception via tenacity
                     return await fn(*args, **kwargs)
 
         return wrapper
