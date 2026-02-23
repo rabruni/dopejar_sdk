@@ -313,3 +313,85 @@ __all__ = [
     "complete",
     "embed",
 ]
+
+
+# ── MCP handlers ──────────────────────────────────────────────────────────────
+
+async def _mcp_call_inference(args: dict) -> dict:
+    messages = [Message(**m) for m in args["messages"]]
+    response = await complete(
+        messages,
+        model=args.get("model"),
+        max_tokens=args.get("max_tokens", 1024),
+        temperature=args.get("temperature", 0.7),
+    )
+    return {
+        "content": response.content,
+        "model": response.model,
+        "usage": response.usage,
+    }
+
+
+async def _mcp_embed_text(args: dict) -> dict:
+    vectors = await embed(args["texts"], model=args.get("model"))
+    return {
+        "embeddings": vectors,
+        "count": len(vectors),
+        "dim": len(vectors[0]) if vectors else 0,
+    }
+
+
+__sdk_export__ = {
+    "surface": "agent",
+    "exports": ["complete", "embed", "Message"],
+    "mcp_tools": [
+        {
+            "name": "call_inference",
+            "description": "Call the configured LLM with a list of messages.",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "messages": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "role": {
+                                    "type": "string",
+                                    "enum": ["system", "user", "assistant"],
+                                },
+                                "content": {"type": "string"},
+                            },
+                            "required": ["role", "content"],
+                        },
+                    },
+                    "model": {"type": "string"},
+                    "max_tokens": {"type": "integer", "default": 1024},
+                    "temperature": {"type": "number", "default": 0.7},
+                },
+                "required": ["messages"],
+            },
+            "handler": "_mcp_call_inference",
+        },
+        {
+            "name": "embed_text",
+            "description": "Embed text(s) into vectors using the configured embedding model.",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "texts": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "List of strings to embed",
+                    },
+                    "model": {"type": "string"},
+                },
+                "required": ["texts"],
+            },
+            "handler": "_mcp_embed_text",
+        },
+    ],
+    "description": "LLM inference via LiteLLM (100+ models: OpenAI, Anthropic, Ollama, etc.)",
+    "tier": "tier4_advanced",
+    "module": "inference",
+}

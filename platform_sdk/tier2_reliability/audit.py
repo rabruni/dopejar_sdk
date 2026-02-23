@@ -126,3 +126,49 @@ async def _write_db(record: AuditRecord) -> None:
                 "metadata": str(record.metadata),
             },
         )
+
+
+# ── MCP handler ───────────────────────────────────────────────────────────────
+
+async def _mcp_audit_event(args: dict) -> dict:
+    record = await audit(
+        actor=args["actor_id"],
+        action=args["action"],
+        resource_type=args["resource_type"],
+        resource_id=args["resource_id"],
+        outcome=args.get("outcome", "success"),
+        metadata=args.get("metadata"),
+    )
+    return {"audited": True, "action": args["action"], "id": record.id}
+
+
+__sdk_export__ = {
+    "surface": "service",
+    "exports": ["audit", "AuditRecord"],
+    "mcp_tools": [
+        {
+            "name": "audit_event",
+            "description": "Record an append-only audit event (GDPR Article 30 / SOC 2).",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "actor_id": {"type": "string"},
+                    "action": {"type": "string"},
+                    "resource_type": {"type": "string"},
+                    "resource_id": {"type": "string"},
+                    "outcome": {
+                        "type": "string",
+                        "enum": ["success", "failure", "denied"],
+                        "default": "success",
+                    },
+                    "metadata": {"type": "object"},
+                },
+                "required": ["actor_id", "action", "resource_type", "resource_id"],
+            },
+            "handler": "_mcp_audit_event",
+        },
+    ],
+    "description": "Append-only audit trail (tamper-evident, compliance-ready)",
+    "tier": "tier2_reliability",
+    "module": "audit",
+}

@@ -4,6 +4,8 @@ site_url: https://docs.platform.internal
 repo_url: https://github.com/your-org/platform_sdk
 repo_name: platform_sdk
 
+docs_dir: docs
+
 theme:
   name: material
   palette:
@@ -40,11 +42,14 @@ plugins:
 nav:
   - Home: index.md
   - Getting Started:
-    - Quick Start: README.md
     - Adoption Guide: ADOPTION.md
     - Platform Contract: CONTRACT.md
     - Tooling: TOOLING.md
-  - Module Reference: MODULES.md
+  - Surfaces:
+    - Agent Surface: surfaces/agent.md
+    - Service Surface: surfaces/service.md
+  - Guides:
+    - Adding a Module: guides/adding-a-module.md
   - API Reference:
     - Tier 0 Core:
       - identity: api/tier0/identity.md
@@ -60,6 +65,7 @@ nav:
       - serialize: api/tier1/serialize.md
       - retry: api/tier1/retry.md
       - ratelimit: api/tier1/ratelimit.md
+      - middleware: api/tier1/middleware.md
     - Tier 2 Reliability:
       - health: api/tier2/health.md
       - audit: api/tier2/audit.md

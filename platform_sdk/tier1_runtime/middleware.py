@@ -112,3 +112,12 @@ class PlatformWSGIMiddleware:
 
 
 __all__ = ["PlatformASGIMiddleware", "PlatformWSGIMiddleware"]
+
+
+__sdk_export__ = {
+    "surface": "service",
+    "exports": ["PlatformASGIMiddleware", "PlatformWSGIMiddleware"],
+    "description": "ASGI/WSGI middleware factory for context, auth, logging, and tracing",
+    "tier": "tier1_runtime",
+    "module": "middleware",
+}

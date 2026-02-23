@@ -121,3 +121,49 @@ def bind_context(**kwargs: Any) -> None:
 def clear_context() -> None:
     """Clear all context-bound log fields. Call at end of request."""
     structlog.contextvars.clear_contextvars()
+
+
+# ── MCP handler ───────────────────────────────────────────────────────────────
+
+async def _mcp_log_event(args: dict) -> dict:
+    level = args.get("level", "info")
+    event = args["event"]
+    data = args.get("data", {})
+    log = get_logger()
+    getattr(log, level)(event, **data)
+    return {"logged": True, "event": event, "level": level}
+
+
+__sdk_export__ = {
+    "surface": "agent",
+    "exports": ["get_logger"],
+    "mcp_tools": [
+        {
+            "name": "log_event",
+            "description": "Emit a structured log event via platform_sdk logging.",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "level": {
+                        "type": "string",
+                        "enum": ["debug", "info", "warning", "error"],
+                        "default": "info",
+                    },
+                    "event": {
+                        "type": "string",
+                        "description": "Short event name (snake_case)",
+                    },
+                    "data": {
+                        "type": "object",
+                        "description": "Additional key-value context",
+                    },
+                },
+                "required": ["event"],
+            },
+            "handler": "_mcp_log_event",
+        },
+    ],
+    "description": "Structured logging via structlog",
+    "tier": "tier0_core",
+    "module": "logging",
+}

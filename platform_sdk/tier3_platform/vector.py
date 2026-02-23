@@ -235,3 +235,82 @@ async def create_collection(
 ) -> None:
     """Create a new vector collection."""
     await get_provider().create_collection(collection, vector_size, distance)
+
+
+# ── MCP handlers ──────────────────────────────────────────────────────────────
+
+async def _mcp_query_vector(args: dict) -> dict:
+    # Import embed at runtime — tier3 cannot import tier4 at module load time
+    from platform_sdk.tier4_advanced.inference import embed as _embed  # noqa: PLC0415
+    query_text = args["query"]
+    collection = args.get("collection", "default")
+    top_k = args.get("top_k", 5)
+    vectors = await _embed([query_text])
+    results = await vector_search(
+        collection=collection,
+        query_vector=vectors[0],
+        top_k=top_k,
+    )
+    return {
+        "results": [
+            {"id": r.id, "score": r.score, "payload": r.payload}
+            for r in results
+        ],
+    }
+
+
+async def _mcp_upsert_vector(args: dict) -> dict:
+    # Import embed at runtime — tier3 cannot import tier4 at module load time
+    from platform_sdk.tier4_advanced.inference import embed as _embed  # noqa: PLC0415
+    text = args["text"]
+    vectors = await _embed([text])
+    await vector_upsert(
+        collection=args.get("collection", "default"),
+        id=args["id"],
+        vector=vectors[0],
+        payload={"text": text, **(args.get("metadata") or {})},
+    )
+    return {"upserted": True, "id": args["id"]}
+
+
+__sdk_export__ = {
+    "surface": "agent",
+    "exports": ["vector_search", "vector_upsert", "vector_delete"],
+    "mcp_tools": [
+        {
+            "name": "query_vector",
+            "description": "Perform a similarity search in the platform vector store. Query text is automatically embedded.",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Search query text (automatically embedded)",
+                    },
+                    "collection": {"type": "string", "default": "default"},
+                    "top_k": {"type": "integer", "default": 5},
+                },
+                "required": ["query"],
+            },
+            "handler": "_mcp_query_vector",
+        },
+        {
+            "name": "upsert_vector",
+            "description": "Add or update a document in the platform vector store. Text is automatically embedded.",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string"},
+                    "text": {"type": "string"},
+                    "collection": {"type": "string", "default": "default"},
+                    "metadata": {"type": "object"},
+                },
+                "required": ["id", "text"],
+            },
+            "handler": "_mcp_upsert_vector",
+        },
+    ],
+    "description": "Vector store abstraction for embeddings and RAG (Qdrant or in-memory)",
+    "tier": "tier3_platform",
+    "module": "vector",
+}

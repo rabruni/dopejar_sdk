@@ -184,3 +184,12 @@ async def require_permission(
             "forbidden",
             f"Permission denied: {action} on {resource}",
         )
+
+
+__sdk_export__ = {
+    "surface": "service",
+    "exports": ["can", "require_permission"],
+    "description": "SpiceDB Zanzibar authorization (RBAC/ABAC), can/require_permission",
+    "tier": "tier3_platform",
+    "module": "authorization",
+}

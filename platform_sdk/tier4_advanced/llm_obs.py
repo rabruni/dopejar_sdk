@@ -366,3 +366,12 @@ __all__ = [
     "get_llm_tracer",
     "record_inference",
 ]
+
+
+__sdk_export__ = {
+    "surface": "agent",
+    "exports": ["observe", "get_llm_tracer", "record_inference"],
+    "description": "LLM observability via Langfuse — trace tokens, cost, latency, and quality",
+    "tier": "tier4_advanced",
+    "module": "llm_obs",
+}

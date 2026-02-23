@@ -120,3 +120,12 @@ def get_cache() -> _MemoryCache | _RedisCache:
 def _reset_cache() -> None:
     global _cache
     _cache = None
+
+
+__sdk_export__ = {
+    "surface": "service",
+    "exports": ["get_cache"],
+    "description": "In-memory/Redis cache with TTL and stampede protection",
+    "tier": "tier2_reliability",
+    "module": "cache",
+}

@@ -105,3 +105,12 @@ def _reset() -> None:
     global _engine, _session_factory
     _engine = None
     _session_factory = None
+
+
+__sdk_export__ = {
+    "surface": "service",
+    "exports": ["get_session", "get_engine"],
+    "description": "SQLAlchemy 2.x async sessions and engine management",
+    "tier": "tier0_core",
+    "module": "data",
+}

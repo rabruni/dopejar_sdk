@@ -179,3 +179,35 @@ def _reset_provider() -> None:
 def get_secret(key: str) -> SecretStr:
     """Retrieve a secret by name. Returns SecretStr — value is never logged."""
     return get_provider().get(key)
+
+
+# ── MCP handler ───────────────────────────────────────────────────────────────
+
+async def _mcp_get_secret(args: dict) -> dict:
+    key = args["key"]
+    value = get_secret(key)
+    # Never return the raw value — return confirmation only
+    return {"key": key, "found": value is not None, "value": "[REDACTED]"}
+
+
+__sdk_export__ = {
+    "surface": "service",
+    "exports": ["get_secret", "SecretStr"],
+    "mcp_tools": [
+        {
+            "name": "get_secret",
+            "description": "Retrieve a secret value by key using the configured secrets backend. Returns confirmation only — the raw value is never exposed.",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "key": {"type": "string", "description": "Secret key name"},
+                },
+                "required": ["key"],
+            },
+            "handler": "_mcp_get_secret",
+        },
+    ],
+    "description": "Secret retrieval with SecretStr anti-logging wrapper",
+    "tier": "tier0_core",
+    "module": "secrets",
+}

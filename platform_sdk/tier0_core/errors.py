@@ -170,3 +170,16 @@ def configure_sentry(dsn: str, **kwargs: Any) -> None:
     import sentry_sdk
     sentry_sdk.init(dsn=dsn, **kwargs)
     os.environ["PLATFORM_ERROR_BACKEND"] = "sentry"
+
+
+__sdk_export__ = {
+    "surface": "both",
+    "exports": [
+        "PlatformError", "AuthError", "ValidationError", "NotFoundError",
+        "ForbiddenError", "ConflictError", "RateLimitError", "UpstreamError",
+        "ConfigurationError",
+    ],
+    "description": "Standard error taxonomy for all platform modules",
+    "tier": "tier0_core",
+    "module": "errors",
+}

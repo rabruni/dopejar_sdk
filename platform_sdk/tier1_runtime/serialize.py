@@ -53,3 +53,12 @@ def deserialize(data: bytes | str, model: Type[T], format: str | None = None) ->
 def to_dict(obj: BaseModel) -> dict[str, Any]:
     """Convert a Pydantic model to a plain dict (for JSON responses)."""
     return obj.model_dump(mode="json")
+
+
+__sdk_export__ = {
+    "surface": "service",
+    "exports": ["serialize", "deserialize"],
+    "description": "JSON serialization with schema evolution and versioning support",
+    "tier": "tier1_runtime",
+    "module": "serialize",
+}

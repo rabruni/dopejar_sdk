@@ -212,3 +212,12 @@ def verify_token(token: str) -> Principal:
 def get_principal(principal_id: str) -> Principal:
     """Retrieve a principal by ID."""
     return get_provider().get_principal(principal_id)
+
+
+__sdk_export__ = {
+    "surface": "service",
+    "exports": ["verify_token", "get_principal", "Principal"],
+    "description": "Identity verification and principal normalization (Zitadel, Auth0, mock)",
+    "tier": "tier0_core",
+    "module": "identity",
+}

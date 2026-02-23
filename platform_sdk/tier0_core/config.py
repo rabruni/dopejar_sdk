@@ -106,3 +106,12 @@ def get_config() -> PlatformConfig:
 def _reset_config() -> None:
     """For tests — clear the config cache."""
     get_config.cache_clear()
+
+
+__sdk_export__ = {
+    "surface": "service",
+    "exports": ["get_config", "PlatformConfig"],
+    "description": "Typed configuration via pydantic-settings with env-var layering",
+    "tier": "tier0_core",
+    "module": "config",
+}

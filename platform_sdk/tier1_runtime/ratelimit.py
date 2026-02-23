@@ -116,3 +116,51 @@ def _redis_check(key: str, limit: int, window: int, redis_url: str) -> RateLimit
         # Redis unavailable — fall back to in-process
         bucket = _get_bucket(limit, window, "fallback")
         return bucket.check(key)
+
+
+# ── MCP handler ───────────────────────────────────────────────────────────────
+
+async def _mcp_check_rate_limit(args: dict) -> dict:
+    from platform_sdk.tier0_core.errors import RateLimitError
+    try:
+        result = check_rate_limit(
+            key=args["key"],
+            limit=args["limit"],
+            window=args.get("window_seconds", 60),
+        )
+        return {"key": args["key"], "allowed": result.allowed, "remaining": result.remaining}
+    except RateLimitError as exc:
+        return {
+            "key": args["key"],
+            "allowed": False,
+            "remaining": 0,
+            "retry_after": exc.retry_after,
+        }
+
+
+__sdk_export__ = {
+    "surface": "service",
+    "exports": ["check_rate_limit"],
+    "mcp_tools": [
+        {
+            "name": "check_rate_limit",
+            "description": "Check if a key is within rate limit. Returns allowed=true/false.",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "key": {"type": "string"},
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max requests per window",
+                    },
+                    "window_seconds": {"type": "integer", "default": 60},
+                },
+                "required": ["key", "limit"],
+            },
+            "handler": "_mcp_check_rate_limit",
+        },
+    ],
+    "description": "Token-bucket rate limiting (in-process or Redis-distributed)",
+    "tier": "tier1_runtime",
+    "module": "ratelimit",
+}

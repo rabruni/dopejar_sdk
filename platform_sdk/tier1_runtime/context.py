@@ -86,3 +86,12 @@ def get_principal_id() -> str | None:
 
 def get_org_id() -> str | None:
     return get_context().org_id
+
+
+__sdk_export__ = {
+    "surface": "service",
+    "exports": ["get_context", "set_context", "RequestContext"],
+    "description": "Request context via contextvars (request_id, trace_id, principal)",
+    "tier": "tier1_runtime",
+    "module": "context",
+}

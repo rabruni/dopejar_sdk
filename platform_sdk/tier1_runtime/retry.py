@@ -85,3 +85,12 @@ def retry_policy(
 
         return wrapper
     return decorator
+
+
+__sdk_export__ = {
+    "surface": "service",
+    "exports": ["retry_policy"],
+    "description": "Tenacity-backed retry with exponential backoff, jitter, and error classification",
+    "tier": "tier1_runtime",
+    "module": "retry",
+}

@@ -89,3 +89,65 @@ def start_metrics_server(port: int | None = None) -> None:
     """
     port = port or int(os.getenv("PLATFORM_METRICS_PORT", "8001"))
     start_http_server(port)
+
+
+# ── MCP handler ───────────────────────────────────────────────────────────────
+
+_mcp_metric_fns: dict = {}
+
+
+async def _mcp_emit_metric(args: dict) -> dict:
+    kind = args["kind"]
+    metric_name = args["name"]
+    value = args.get("value", 1)
+    label_dict = args.get("labels") or {}
+    label_keys = list(label_dict.keys()) or None
+
+    key = f"{kind}:{metric_name}"
+    if key not in _mcp_metric_fns:
+        desc = f"MCP {kind}: {metric_name}"
+        if kind == "counter":
+            _mcp_metric_fns[key] = counter(metric_name, desc, label_keys)
+        elif kind == "gauge":
+            _mcp_metric_fns[key] = gauge(metric_name, desc, label_keys)
+        elif kind == "histogram":
+            _mcp_metric_fns[key] = histogram(metric_name, desc, label_keys)
+
+    fn = _mcp_metric_fns.get(key)
+    if fn is not None:
+        if kind == "counter":
+            fn(**label_dict).inc(value)
+        elif kind == "gauge":
+            fn(**label_dict).set(value)
+        elif kind == "histogram":
+            fn(**label_dict).observe(value)
+    return {"recorded": True, "kind": kind, "name": metric_name}
+
+
+__sdk_export__ = {
+    "surface": "service",
+    "exports": ["counter", "gauge", "histogram"],
+    "mcp_tools": [
+        {
+            "name": "emit_metric",
+            "description": "Record a platform metric (counter, gauge, or histogram).",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "kind": {
+                        "type": "string",
+                        "enum": ["counter", "gauge", "histogram"],
+                    },
+                    "name": {"type": "string"},
+                    "value": {"type": "number", "default": 1},
+                    "labels": {"type": "object"},
+                },
+                "required": ["kind", "name"],
+            },
+            "handler": "_mcp_emit_metric",
+        },
+    ],
+    "description": "Prometheus counters, gauges, and histograms",
+    "tier": "tier0_core",
+    "module": "metrics",
+}

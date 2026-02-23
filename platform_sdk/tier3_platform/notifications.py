@@ -208,3 +208,12 @@ async def send_notification(
         )
     """
     return await get_provider().send(recipient, template, channel, data or {})
+
+
+__sdk_export__ = {
+    "surface": "service",
+    "exports": ["send_notification"],
+    "description": "Multi-channel notifications via Novu (email, SMS, push, Slack, in-app)",
+    "tier": "tier3_platform",
+    "module": "notifications",
+}

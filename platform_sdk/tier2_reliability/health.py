@@ -133,3 +133,27 @@ def get_health_checker() -> HealthChecker:
 def _reset_health_checker() -> None:
     global _checker
     _checker = None
+
+
+# ── MCP handler ───────────────────────────────────────────────────────────────
+
+async def _mcp_check_health(_args: dict) -> dict:
+    checker = get_health_checker()
+    return await checker.readiness()
+
+
+__sdk_export__ = {
+    "surface": "service",
+    "exports": ["HealthChecker", "get_health_checker"],
+    "mcp_tools": [
+        {
+            "name": "check_health",
+            "description": "Return the platform health status (liveness and readiness checks).",
+            "schema": {"type": "object", "properties": {}},
+            "handler": "_mcp_check_health",
+        },
+    ],
+    "description": "Liveness/readiness health checks (K8s-compatible)",
+    "tier": "tier2_reliability",
+    "module": "health",
+}

@@ -49,3 +49,12 @@ def validate_response(model: Type[T], data: Any) -> T:
     Raises ValidationError if the response shape is wrong.
     """
     return validate_input(model, data)
+
+
+__sdk_export__ = {
+    "surface": "service",
+    "exports": ["validate_input"],
+    "description": "Pydantic v2 input validation with contract enforcement",
+    "tier": "tier1_runtime",
+    "module": "validate",
+}
