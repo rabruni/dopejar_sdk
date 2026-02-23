@@ -33,6 +33,7 @@ plugins:
   - mkdocstrings:
       handlers:
         python:
+          paths: ['..']  # platform_sdk package lives one level above mkdocs.yml
           options:
             show_source: true
             show_root_heading: true

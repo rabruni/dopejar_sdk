@@ -59,18 +59,4 @@ async def answer_question(question: str, user_id: str) -> str:
 
 ## API Reference
 
-::: platform_sdk.tier4_advanced.inference
-    options:
-      members: [complete, embed, Message]
-
-::: platform_sdk.tier4_advanced.llm_obs
-    options:
-      members: [observe, get_llm_tracer, record_inference]
-
-::: platform_sdk.tier3_platform.vector
-    options:
-      members: [vector_search, vector_upsert, vector_delete]
-
-::: platform_sdk.tier0_core.logging
-    options:
-      members: [get_logger]
+Full API reference for each module is in the [API Reference](../api/tier4/inference.md) section.

@@ -71,14 +71,4 @@ async def create_order(request: Request, body: OrderInput):
 
 ## API Reference
 
-::: platform_sdk.tier0_core.identity
-    options:
-      members: [verify_token, get_principal, Principal]
-
-::: platform_sdk.tier0_core.config
-    options:
-      members: [get_config, PlatformConfig]
-
-::: platform_sdk.tier0_core.data
-    options:
-      members: [get_session, get_engine]
+Full API reference for each module is in the [API Reference](../api/tier0/identity.md) section.
