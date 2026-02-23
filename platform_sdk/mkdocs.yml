@@ -1,11 +1,49 @@
 site_name: Platform SDK
-site_description: Shared platform SDK for all services and agents
 site_url: https://docs.platform.internal
+site_description: Shared platform SDK for all services and agents
 repo_url: https://github.com/your-org/platform_sdk
 repo_name: platform_sdk
-
 docs_dir: docs
-
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Adoption Guide: ADOPTION.md
+      - Platform Contract: CONTRACT.md
+      - Tooling: TOOLING.md
+  - Surfaces:
+      - Agent Surface: surfaces/agent.md
+      - Service Surface: surfaces/service.md
+  - Guides:
+      - Adding a Module: guides/adding-a-module.md
+  - API Reference:
+      - Tier 0 Core:
+          - identity: api/tier0/identity.md
+          - logging: api/tier0/logging.md
+          - errors: api/tier0/errors.md
+          - config: api/tier0/config.md
+          - secrets: api/tier0/secrets.md
+          - data: api/tier0/data.md
+          - metrics: api/tier0/metrics.md
+      - Tier 1 Runtime:
+          - context: api/tier1/context.md
+          - validate: api/tier1/validate.md
+          - serialize: api/tier1/serialize.md
+          - retry: api/tier1/retry.md
+          - ratelimit: api/tier1/ratelimit.md
+          - middleware: api/tier1/middleware.md
+      - Tier 2 Reliability:
+          - health: api/tier2/health.md
+          - audit: api/tier2/audit.md
+          - cache: api/tier2/cache.md
+      - Tier 3 Platform:
+          - authorization: api/tier3/authorization.md
+          - notifications: api/tier3/notifications.md
+          - vector: api/tier3/vector.md
+      - Tier 4 Advanced:
+          - inference: api/tier4/inference.md
+          - llm_obs: api/tier4/llm_obs.md
+          - evals: api/tier4/evals.md
+          - cost: api/tier4/cost.md
 theme:
   name: material
   palette:
@@ -27,60 +65,19 @@ theme:
     - navigation.top
     - search.highlight
     - content.code.copy
-
 plugins:
   - search
   - mkdocstrings:
       handlers:
         python:
-          paths: ['..']  # platform_sdk package lives one level above mkdocs.yml
+          paths:
+            - ..
           options:
             show_source: true
             show_root_heading: true
             show_category_heading: true
             docstring_style: google
-
-nav:
-  - Home: index.md
-  - Getting Started:
-    - Adoption Guide: ADOPTION.md
-    - Platform Contract: CONTRACT.md
-    - Tooling: TOOLING.md
-  - Surfaces:
-    - Agent Surface: surfaces/agent.md
-    - Service Surface: surfaces/service.md
-  - Guides:
-    - Adding a Module: guides/adding-a-module.md
-  - API Reference:
-    - Tier 0 Core:
-      - identity: api/tier0/identity.md
-      - logging: api/tier0/logging.md
-      - errors: api/tier0/errors.md
-      - config: api/tier0/config.md
-      - secrets: api/tier0/secrets.md
-      - data: api/tier0/data.md
-      - metrics: api/tier0/metrics.md
-    - Tier 1 Runtime:
-      - context: api/tier1/context.md
-      - validate: api/tier1/validate.md
-      - serialize: api/tier1/serialize.md
-      - retry: api/tier1/retry.md
-      - ratelimit: api/tier1/ratelimit.md
-      - middleware: api/tier1/middleware.md
-    - Tier 2 Reliability:
-      - health: api/tier2/health.md
-      - audit: api/tier2/audit.md
-      - cache: api/tier2/cache.md
-    - Tier 3 Platform:
-      - authorization: api/tier3/authorization.md
-      - notifications: api/tier3/notifications.md
-      - vector: api/tier3/vector.md
-    - Tier 4 Advanced:
-      - inference: api/tier4/inference.md
-      - llm_obs: api/tier4/llm_obs.md
-      - evals: api/tier4/evals.md
-      - cost: api/tier4/cost.md
-
+  - techdocs-core
 markdown_extensions:
   - admonition
   - pymdownx.details
