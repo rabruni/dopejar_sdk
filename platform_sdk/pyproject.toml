@@ -1,0 +1,91 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "platform-sdk"
+version = "0.1.0"
+description = "Shared platform SDK — every cross-cutting concern, one place, no bypassing."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+# Absolute minimum — no optional extras needed to import the package skeleton
+dependencies = []
+
+[project.optional-dependencies]
+# Tier A + B — all 20 minimal modules
+core = [
+    "structlog>=24.0",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "httpx>=0.27",
+    "tenacity>=8.0",
+    "prometheus-client>=0.20",
+    "redis>=5.0",
+    "msgspec>=0.18",
+]
+
+# Tier C — GenAI additions
+genai = [
+    "litellm>=1.40",
+    "langfuse>=2.0",
+    "qdrant-client>=1.9",
+    "openai>=1.0",          # litellm dependency
+]
+
+# Identity backends (pick one)
+identity-zitadel = ["PyJWT>=2.8", "httpx>=0.27"]
+identity-auth0   = ["python-jose>=3.3", "httpx>=0.27"]
+
+# Notifications
+notifications = ["httpx>=0.27"]   # Novu REST API via httpx
+
+# MCP server
+mcp = ["mcp>=1.0"]
+
+# Full install — everything
+full = [
+    "platform-sdk[core]",
+    "platform-sdk[genai]",
+    "platform-sdk[identity-zitadel]",
+    "platform-sdk[notifications]",
+    "platform-sdk[mcp]",
+]
+
+# Development
+dev = [
+    "platform-sdk[full]",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "freezegun>=1.4",
+    "anyio>=4.0",
+    "mypy>=1.9",
+    "ruff>=0.4",
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=0.25",
+]
+
+[project.scripts]
+platform-sdk-mcp = "platform_sdk.mcp_server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["platform_sdk"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
