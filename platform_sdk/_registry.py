@@ -32,6 +32,7 @@ TIER_MODULES: list[tuple[str, str]] = [
     ("tier0_core", "secrets"),
     ("tier0_core", "data"),
     ("tier0_core", "metrics"),
+    ("tier0_core", "ledger"),
     # tier1_runtime — request-level safety
     ("tier1_runtime", "context"),
     ("tier1_runtime", "validate"),

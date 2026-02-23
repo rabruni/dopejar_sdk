@@ -54,6 +54,9 @@ from platform_sdk.tier0_core.secrets import get_secret, SecretStr
 # ── Data ──────────────────────────────────────────────────────────────────────
 from platform_sdk.tier0_core.data import get_session, get_engine
 
+# ── Ledger ────────────────────────────────────────────────────────────────────
+from platform_sdk.tier0_core.ledger import append_turn, get_conversation as get_ledger_conversation, verify_chain, LedgerEntry
+
 # ── Metrics ───────────────────────────────────────────────────────────────────
 from platform_sdk.tier0_core.metrics import counter, gauge, histogram
 
@@ -103,6 +106,8 @@ __all__ = [
     "get_secret", "SecretStr",
     # data
     "get_session", "get_engine",
+    # ledger
+    "append_turn", "get_ledger_conversation", "verify_chain", "LedgerEntry",
     # metrics
     "counter", "gauge", "histogram",
     # context

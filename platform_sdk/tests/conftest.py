@@ -22,6 +22,7 @@ os.environ.setdefault("PLATFORM_AUTHZ_BACKEND", "simple")
 os.environ.setdefault("PLATFORM_NOTIFICATIONS_BACKEND", "mock")
 os.environ.setdefault("PLATFORM_TASKS_BACKEND", "inprocess")
 os.environ.setdefault("PLATFORM_FLAGS_BACKEND", "mock")
+os.environ.setdefault("PLATFORM_LEDGER_BACKEND", "mock")
 os.environ.setdefault("PLATFORM_ENVIRONMENT", "test")
 os.environ.setdefault("PLATFORM_SERVICE_NAME", "test-service")
 

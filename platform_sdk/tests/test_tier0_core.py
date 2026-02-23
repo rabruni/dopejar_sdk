@@ -126,3 +126,104 @@ class TestRedact:
         data = {"name": "Alice", "email": "alice@example.com", "age": 30}
         result = redact_dict(data)
         assert result == data
+
+
+# ── ledger ──────────────────────────────────────────────────────────────────
+
+class TestLedger:
+    @pytest.mark.asyncio
+    async def test_append_single_turn(self):
+        from platform_sdk.tier0_core.ledger import MockLedgerProvider, LedgerEntry
+        provider = MockLedgerProvider()
+        entry = LedgerEntry(conversation_id="conv-1", role="user", content="Hello")
+        result = await provider.append(entry)
+        assert result.turn_index == 0
+        assert result.prev_digest == ""
+        assert len(result.digest) == 64  # SHA-256 hex
+
+    @pytest.mark.asyncio
+    async def test_chain_links_sequential_turns(self):
+        from platform_sdk.tier0_core.ledger import MockLedgerProvider, LedgerEntry
+        provider = MockLedgerProvider()
+        e1 = await provider.append(LedgerEntry(conversation_id="conv-2", role="user", content="Hi"))
+        e2 = await provider.append(LedgerEntry(conversation_id="conv-2", role="assistant", content="Hello!"))
+        assert e2.turn_index == 1
+        assert e2.prev_digest == e1.digest
+
+    @pytest.mark.asyncio
+    async def test_verify_chain_passes_for_valid_history(self):
+        from platform_sdk.tier0_core.ledger import MockLedgerProvider, LedgerEntry
+        provider = MockLedgerProvider()
+        for role, content in [("user", "Q1"), ("assistant", "A1"), ("user", "Q2")]:
+            await provider.append(LedgerEntry(conversation_id="conv-3", role=role, content=content))
+        ok, reason = await provider.verify_chain("conv-3")
+        assert ok is True
+        assert reason == "ok"
+
+    @pytest.mark.asyncio
+    async def test_verify_chain_detects_tampered_content(self):
+        from platform_sdk.tier0_core.ledger import MockLedgerProvider, LedgerEntry, _compute_digest
+        provider = MockLedgerProvider()
+        await provider.append(LedgerEntry(conversation_id="conv-4", role="user", content="Original"))
+        await provider.append(LedgerEntry(conversation_id="conv-4", role="assistant", content="Reply"))
+
+        # Tamper with turn 0's content without updating the digest
+        provider._store["conv-4"][0].content = "TAMPERED"
+
+        ok, reason = await provider.verify_chain("conv-4")
+        assert ok is False
+        assert "turn 0" in reason
+
+    @pytest.mark.asyncio
+    async def test_get_conversation_returns_turns_in_order(self):
+        from platform_sdk.tier0_core.ledger import MockLedgerProvider, LedgerEntry
+        provider = MockLedgerProvider()
+        for i in range(5):
+            await provider.append(LedgerEntry(conversation_id="conv-5", role="user", content=f"msg{i}"))
+        turns = await provider.get_conversation("conv-5")
+        assert len(turns) == 5
+        assert [t.turn_index for t in turns] == [0, 1, 2, 3, 4]
+
+    @pytest.mark.asyncio
+    async def test_get_conversation_pagination(self):
+        from platform_sdk.tier0_core.ledger import MockLedgerProvider, LedgerEntry
+        provider = MockLedgerProvider()
+        for i in range(6):
+            await provider.append(LedgerEntry(conversation_id="conv-6", role="user", content=f"msg{i}"))
+        page = await provider.get_conversation("conv-6", limit=3, offset=2)
+        assert len(page) == 3
+        assert page[0].turn_index == 2
+
+    @pytest.mark.asyncio
+    async def test_verify_empty_conversation_is_valid(self):
+        from platform_sdk.tier0_core.ledger import MockLedgerProvider
+        provider = MockLedgerProvider()
+        ok, reason = await provider.verify_chain("nonexistent")
+        assert ok is True
+
+    @pytest.mark.asyncio
+    async def test_public_api_append_turn(self):
+        from platform_sdk.tier0_core.ledger import append_turn, verify_chain, _reset_provider
+        _reset_provider()
+        entry = await append_turn("conv-pub-1", "user", "Test message")
+        assert entry.conversation_id == "conv-pub-1"
+        assert entry.role == "user"
+        assert entry.digest != ""
+
+    @pytest.mark.asyncio
+    async def test_public_api_full_flow(self):
+        from platform_sdk.tier0_core.ledger import append_turn, get_conversation, verify_chain, _reset_provider
+        _reset_provider()
+        conv_id = "conv-pub-2"
+        await append_turn(conv_id, "user", "What is 2+2?")
+        await append_turn(conv_id, "assistant", "4", metadata={"model": "mock"})
+        turns = await get_conversation(conv_id)
+        assert len(turns) == 2
+        ok, reason = await verify_chain(conv_id)
+        assert ok is True
+
+    @pytest.mark.asyncio
+    async def test_service_surface_exports_ledger(self):
+        from platform_sdk.service import append_turn, verify_chain, LedgerEntry
+        assert callable(append_turn)
+        assert callable(verify_chain)

@@ -24,6 +24,7 @@ nav:
           - secrets: api/tier0/secrets.md
           - data: api/tier0/data.md
           - metrics: api/tier0/metrics.md
+          - ledger: api/tier0/ledger.md
       - Tier 1 Runtime:
           - context: api/tier1/context.md
           - validate: api/tier1/validate.md
