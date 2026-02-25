@@ -1,0 +1,158 @@
+# DoPeJarMo — Docker Service Topology
+# Four services. Nine primitives. Identity/auth external to kernel (NORTH_STAR Q2).
+# Full topology: OPERATIONAL_SPEC.md §Docker Topology.
+#
+# Session transport: WebSocket on :8080
+#   /operator → DoPeJarMo (operator sessions)
+#   /user     → DoPeJar (user sessions)
+#   Connection drop = session boundary.
+#
+# Write Path: kernel → ledger via immudb native gRPC over Docker bridge.
+#   Synchronous write guarantee. Sub-millisecond on same host.
+#   CLI fallback tools connect directly to immudb, bypassing kernel.
+#
+# Auth: OIDC via Zitadel. JWT validated on WebSocket connect.
+#   Permission set loaded once at session start, cached for session lifetime.
+#   No per-operation auth calls. Supports OIDC federation to cloud IAM.
+#
+# Primitive mapping:
+#   kernel  → HO1, HO2, HO3 (Graph), Write Path, Signal Accumulator,
+#             Work Order, Prompt Contract, Package Lifecycle, Framework Hierarchy
+#   ledger  → Ledger (append-only, hash-chained truth store)
+#   ollama  → dependency (local LLM for HO1 internal calls)
+#   zitadel → external service (identity + authorization)
+
+services:
+
+  # ── Kernel ──────────────────────────────────────────────────────────────────
+  # The DoPeJarMo core process.
+  # Contains: HO2 (orchestration), HO3 (in-memory Graph), Write Path,
+  #           HO1 (threaded execution pool), Package Lifecycle, gate validation.
+  # HO3 is RAM inside this process — not a database.
+  # Write Path is synchronous — appends to ledger via immudb gRPC, folds into
+  # Graph, returns ack. Sub-millisecond on Docker bridge network.
+  #
+  # WebSocket sessions:
+  #   /operator — DoPeJarMo interactive agent shell (operator)
+  #   /user     — DoPeJar conversational AI (user)
+  #   Connection drop = session boundary → HO2 triggers SESSION_END + Graph snapshot.
+  #
+  # Auth model:
+  #   JWT validated on WebSocket connect (OIDC from Zitadel).
+  #   Permission set loaded once at session start, cached for session lifetime.
+  #   No per-operation auth calls to Zitadel.
+  kernel:
+    build: ./kernel
+    ports:
+      - "8080:8080"       # WebSocket: /operator (DoPeJarMo) + /user (DoPeJar)
+    volumes:
+      - governed_fs:/dopejarmo/governed       # Governed filesystem (frameworks, packs, contracts)
+      - staging:/dopejarmo/staging            # Package staging workbench (ungoverned)
+      - snapshots:/dopejarmo/snapshots        # Graph snapshots at session boundaries
+    depends_on:
+      ledger:
+        condition: service_started
+      ollama:
+        condition: service_started
+      zitadel:
+        condition: service_started
+    environment:
+      # Ledger — immudb native gRPC (synchronous Write Path + replay on startup)
+      - IMMUDB_HOST=ledger
+      - IMMUDB_PORT=3322
+      - IMMUDB_USERNAME=immudb
+      - IMMUDB_PASSWORD=immudb
+      - IMMUDB_DATABASE=dopejarmo
+      # Ollama — local LLM for HO1 internal calls
+      - OLLAMA_HOST=http://ollama:11434
+      # Zitadel — OIDC issuer + authorization API
+      - ZITADEL_ISSUER=http://zitadel:8080
+      - ZITADEL_API=http://zitadel:8080
+      # External LLM API keys (user provides)
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      # Platform
+      - PLATFORM_LEDGER_BACKEND=immudb
+      - PLATFORM_IDENTITY_PROVIDER=zitadel
+      - PLATFORM_ENVIRONMENT=local
+
+  # ── Ledger ──────────────────────────────────────────────────────────────────
+  # Primitive: Ledger — append-only, hash-chained truth store.
+  # The sole source of truth for all state. Events are immutable once written.
+  # Write Path in kernel appends events via immudb native gRPC.
+  # Kernel replays post-snapshot events on startup to rebuild Graph.
+  # CLI fallback tools connect directly here, bypassing kernel entirely.
+  # immudb provides native Merkle tree tamper detection.
+  ledger:
+    image: codenotary/immudb:latest
+    ports:
+      - "3322:3322"       # immudb gRPC — kernel Write Path + CLI fallback
+      - "9497:9497"       # immudb metrics
+    volumes:
+      - ledger_data:/var/lib/immudb
+    environment:
+      - IMMUDB_DIR=/var/lib/immudb
+
+  # ── Ollama ──────────────────────────────────────────────────────────────────
+  # Dependency (not a primitive). Local LLM for HO1 internal calls.
+  # Used by HO1 for: Prompt Pack Inspection (classify work orders),
+  #   constrained JSON extraction, synthesis. All under Prompt Contracts.
+  # NOT used for DoPeJar conversation (that goes through external APIs
+  #   via Routing framework policy).
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"     # Ollama HTTP API
+    volumes:
+      - ollama_models:/root/.ollama
+
+  # ── Zitadel ─────────────────────────────────────────────────────────────────
+  # External service: Identity + Authorization (NORTH_STAR Q2).
+  # "Identity and authorization are external services — they run locally but
+  # are architecturally separate from the cognitive kernel."
+  #
+  # Provides:
+  #   - OIDC authentication: operator (DoPeJarMo) + user (DoPeJar) sessions
+  #   - Authorization API: agent permissions (namespaced, scoped — NORTH_STAR Q6)
+  #   - Agent identity: distinct identities per agent (machine users)
+  #   - JWT issuance: validated by kernel on WebSocket connect
+  #   - OIDC federation: upstream to cloud IAM when needed
+  #
+  # NOT part of the cognitive kernel. Kernel calls Zitadel once at session
+  # start (JWT validation + permission load). No per-operation auth calls.
+  # Zitadel does not participate in the cognitive stack (HO1/HO2/HO3/Write Path).
+  #
+  # Zitadel requires PostgreSQL. Database configuration is provided via
+  # environment variables — see ZITADEL_DATABASE_POSTGRES_* below.
+  # The zitadel_data volume persists Zitadel's operational state.
+  zitadel:
+    image: ghcr.io/zitadel/zitadel:latest
+    command: start-from-init --masterkeyFromEnv --tlsMode disabled
+    ports:
+      - "8085:8080"       # OIDC + management API (8085 host to avoid kernel conflict)
+    volumes:
+      - zitadel_data:/var/lib/zitadel
+    environment:
+      - ZITADEL_MASTERKEY=${ZITADEL_MASTERKEY:-MasterkeyNeedsToHave32Characters}
+      - ZITADEL_EXTERNALSECURE=false
+      - ZITADEL_EXTERNALPORT=8085
+      - ZITADEL_EXTERNALDOMAIN=localhost
+      # Database — Zitadel requires PostgreSQL or CockroachDB.
+      # Configure per deployment. Default: local PostgreSQL.
+      - ZITADEL_DATABASE_POSTGRES_HOST=${ZITADEL_DB_HOST:-localhost}
+      - ZITADEL_DATABASE_POSTGRES_PORT=${ZITADEL_DB_PORT:-5432}
+      - ZITADEL_DATABASE_POSTGRES_DATABASE=${ZITADEL_DB_NAME:-zitadel}
+      - ZITADEL_DATABASE_POSTGRES_USER_USERNAME=${ZITADEL_DB_USER:-zitadel}
+      - ZITADEL_DATABASE_POSTGRES_USER_PASSWORD=${ZITADEL_DB_PASSWORD:-zitadel}
+      - ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE=disable
+      - ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME=${ZITADEL_DB_ADMIN_USER:-postgres}
+      - ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD=${ZITADEL_DB_ADMIN_PASSWORD:-postgres}
+      - ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE=disable
+
+volumes:
+  governed_fs:       # Governed filesystem — frameworks, spec packs, packs, files
+  staging:           # Package staging — ungoverned workbench
+  snapshots:         # Graph snapshots — serialized HO3 state at session boundaries
+  ledger_data:       # immudb data directory — append-only event log
+  ollama_models:     # Ollama model cache — persists downloaded models
+  zitadel_data:      # Zitadel operational state (identity + authorization)
