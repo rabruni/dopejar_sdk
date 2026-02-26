@@ -184,6 +184,11 @@ class ImmudbProvider:
 
         self._client = ImmudbClient(f"{host}:{port}")
         self._client.login(username, password)
+        if database != "defaultdb":
+            try:
+                self._client.createDatabaseV2(database, ifNotExists=True)
+            except Exception:
+                pass  # Older immudb versions or database already exists
         self._client.useDatabase(database.encode())
 
     def _entry_key(self, conversation_id: str, turn_index: int) -> bytes:

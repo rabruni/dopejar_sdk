@@ -1,5 +1,6 @@
 # DoPeJarMo — Docker Service Topology
-# Four services. Nine primitives. Identity/auth external to kernel (NORTH_STAR Q2).
+# Four Docker services + Ollama host-native. Nine primitives.
+# Identity/auth external to kernel (NORTH_STAR Q2).
 # Full topology: OPERATIONAL_SPEC.md §Docker Topology.
 #
 # Session transport: WebSocket on :8080
@@ -19,8 +20,9 @@
 #   kernel  → HO1, HO2, HO3 (Graph), Write Path, Signal Accumulator,
 #             Work Order, Prompt Contract, Package Lifecycle, Framework Hierarchy
 #   ledger  → Ledger (append-only, hash-chained truth store)
-#   ollama  → dependency (local LLM for HO1 internal calls)
-#   zitadel → external service (identity + authorization)
+#   ollama  → host-native dependency (local LLM for HO1 internal calls)
+#   zitadel    → external service (identity + authorization)
+#   zitadel-db → infrastructure (PostgreSQL for Zitadel)
 
 services:
 
@@ -52,8 +54,6 @@ services:
     depends_on:
       ledger:
         condition: service_started
-      ollama:
-        condition: service_started
       zitadel:
         condition: service_started
     environment:
@@ -63,8 +63,8 @@ services:
       - IMMUDB_USERNAME=immudb
       - IMMUDB_PASSWORD=immudb
       - IMMUDB_DATABASE=dopejarmo
-      # Ollama — local LLM for HO1 internal calls
-      - OLLAMA_HOST=http://ollama:11434
+      # Ollama — host-native LLM for HO1 internal calls (Metal GPU accelerated)
+      - OLLAMA_HOST=http://host.docker.internal:11434
       # Zitadel — OIDC issuer + authorization API
       - ZITADEL_ISSUER=http://zitadel:8080
       - ZITADEL_API=http://zitadel:8080
@@ -93,18 +93,17 @@ services:
     environment:
       - IMMUDB_DIR=/var/lib/immudb
 
-  # ── Ollama ──────────────────────────────────────────────────────────────────
+  # ── Ollama (host-native) ────────────────────────────────────────────────────
   # Dependency (not a primitive). Local LLM for HO1 internal calls.
   # Used by HO1 for: Prompt Pack Inspection (classify work orders),
   #   constrained JSON extraction, synthesis. All under Prompt Contracts.
   # NOT used for DoPeJar conversation (that goes through external APIs
   #   via Routing framework policy).
-  ollama:
-    image: ollama/ollama:latest
-    ports:
-      - "11434:11434"     # Ollama HTTP API
-    volumes:
-      - ollama_models:/root/.ollama
+  #
+  # Runs NATIVELY on macOS (not in Docker) for Metal GPU acceleration.
+  # Installed at /usr/local/bin/ollama, listening on localhost:11434.
+  # Kernel reaches it via host.docker.internal:11434.
+  # Models: qwen2.5-coder:14b (9GB), qwen3-coder:30b (18.6GB).
 
   # ── Zitadel ─────────────────────────────────────────────────────────────────
   # External service: Identity + Authorization (NORTH_STAR Q2).
@@ -122,14 +121,17 @@ services:
   # start (JWT validation + permission load). No per-operation auth calls.
   # Zitadel does not participate in the cognitive stack (HO1/HO2/HO3/Write Path).
   #
-  # Zitadel requires PostgreSQL. Database configuration is provided via
-  # environment variables — see ZITADEL_DATABASE_POSTGRES_* below.
+  # Zitadel requires PostgreSQL — zitadel-db below provides it.
+  # start-from-init creates schemas on first run, skips on subsequent starts.
   # The zitadel_data volume persists Zitadel's operational state.
   zitadel:
     image: ghcr.io/zitadel/zitadel:latest
     command: start-from-init --masterkeyFromEnv --tlsMode disabled
     ports:
       - "8085:8080"       # OIDC + management API (8085 host to avoid kernel conflict)
+    depends_on:
+      zitadel-db:
+        condition: service_healthy
     volumes:
       - zitadel_data:/var/lib/zitadel
     environment:
@@ -137,22 +139,42 @@ services:
       - ZITADEL_EXTERNALSECURE=false
       - ZITADEL_EXTERNALPORT=8085
       - ZITADEL_EXTERNALDOMAIN=localhost
-      # Database — Zitadel requires PostgreSQL or CockroachDB.
-      # Configure per deployment. Default: local PostgreSQL.
-      - ZITADEL_DATABASE_POSTGRES_HOST=${ZITADEL_DB_HOST:-localhost}
-      - ZITADEL_DATABASE_POSTGRES_PORT=${ZITADEL_DB_PORT:-5432}
-      - ZITADEL_DATABASE_POSTGRES_DATABASE=${ZITADEL_DB_NAME:-zitadel}
-      - ZITADEL_DATABASE_POSTGRES_USER_USERNAME=${ZITADEL_DB_USER:-zitadel}
-      - ZITADEL_DATABASE_POSTGRES_USER_PASSWORD=${ZITADEL_DB_PASSWORD:-zitadel}
+      # Database — Zitadel connects to zitadel-db service.
+      - ZITADEL_DATABASE_POSTGRES_HOST=zitadel-db
+      - ZITADEL_DATABASE_POSTGRES_PORT=5432
+      - ZITADEL_DATABASE_POSTGRES_DATABASE=zitadel
+      - ZITADEL_DATABASE_POSTGRES_USER_USERNAME=zitadel
+      - ZITADEL_DATABASE_POSTGRES_USER_PASSWORD=zitadel
       - ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE=disable
-      - ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME=${ZITADEL_DB_ADMIN_USER:-postgres}
-      - ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD=${ZITADEL_DB_ADMIN_PASSWORD:-postgres}
+      - ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME=postgres
+      - ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD=postgres
       - ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE=disable
+      - ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORDCHANGEREQUIRED=false
+
+  # ── Zitadel DB ────────────────────────────────────────────────────────────
+  # Infrastructure dependency for Zitadel. Not a cognitive primitive.
+  # Zitadel's start-from-init creates schemas, roles, and the application
+  # user on first run. Subsequent starts skip init automatically.
+  zitadel-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    volumes:
+      - zitadel_db_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=zitadel
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d zitadel -U postgres"]
+      interval: 10s
+      timeout: 30s
+      retries: 10
+      start_period: 20s
 
 volumes:
   governed_fs:       # Governed filesystem — frameworks, spec packs, packs, files
   staging:           # Package staging — ungoverned workbench
   snapshots:         # Graph snapshots — serialized HO3 state at session boundaries
   ledger_data:       # immudb data directory — append-only event log
-  ollama_models:     # Ollama model cache — persists downloaded models
   zitadel_data:      # Zitadel operational state (identity + authorization)
+  zitadel_db_data:   # PostgreSQL data for Zitadel
