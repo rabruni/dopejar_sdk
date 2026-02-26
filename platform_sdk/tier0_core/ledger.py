@@ -175,6 +175,7 @@ class ImmudbProvider:
 
     def __init__(self) -> None:
         from immudb import ImmudbClient  # type: ignore[import]
+        from immudb.datatypesv2 import DatabaseSettingsV2  # type: ignore[import]
 
         host = os.getenv("IMMUDB_HOST", "localhost")
         port = int(os.getenv("IMMUDB_PORT", "3322"))
@@ -186,7 +187,9 @@ class ImmudbProvider:
         self._client.login(username, password)
         if database != "defaultdb":
             try:
-                self._client.createDatabaseV2(database, ifNotExists=True)
+                self._client.createDatabaseV2(
+                    database, settings=DatabaseSettingsV2(), ifNotExists=True,
+                )
             except Exception:
                 pass  # Older immudb versions or database already exists
         self._client.useDatabase(database.encode())
