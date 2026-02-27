@@ -1,13 +1,202 @@
+---
+# ── Kernel ───────────────────────────────────────────────────────────────────
+# The DoPeJarMo cognitive process. Contains all nine primitives.
+# WebSocket on :8080 — /operator (agent shell), /user (conversational AI).
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: dopejar
-  description: An example of a Backstage application.
-  # Example for optional annotations
-  # annotations:
-  #   github.com/project-slug: backstage/backstage
-  #   backstage.io/techdocs-ref: dir:.
+  name: kernel
+  description: >
+    DoPeJarMo cognitive kernel — WebSocket server hosting all nine primitives
+    (HO1, HO2, HO3/Graph, Write Path, Signal Accumulator, Work Order,
+    Prompt Contract, Package Lifecycle, Framework Hierarchy).
+  annotations:
+    github.com/project-slug: rabruni/dopejar_sdk
+  tags:
+    - dopejarmo
+    - kernel
+    - websocket
+    - python
+  links:
+    - url: https://github.com/rabruni/dopejar_sdk
+      title: GitHub
+      icon: github
 spec:
-  type: website
-  owner: john@example.com
-  lifecycle: experimental
+  type: service
+  owner: user:ray-bruni
+  lifecycle: production
+  system: dopejarmo
+  providesApis:
+    - kernel-websocket-api
+  dependsOn:
+    - resource:ledger-immudb
+    - resource:zitadel-identity
+    - resource:ollama-inference
+
+---
+# ── Kernel WebSocket API ─────────────────────────────────────────────────────
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: kernel-websocket-api
+  description: >
+    DoPeJarMo session transport. Two WebSocket paths:
+    /operator for agent shell sessions, /user for conversational AI sessions.
+    Connection drop = session boundary.
+  tags:
+    - websocket
+    - dopejarmo
+spec:
+  type: websocket
+  owner: user:ray-bruni
+  lifecycle: production
+  system: dopejarmo
+  definition: |
+    ## Kernel WebSocket API
+
+    **Endpoint:** `ws://<host>:8080`
+
+    ### Paths
+
+    | Path | Purpose | Session Type |
+    |------|---------|-------------|
+    | `/operator` | DoPeJarMo interactive agent shell | Operator session |
+    | `/user` | DoPeJar conversational AI | User session |
+    | `/health` | Health check (returns JSON, then closes) | None |
+
+    ### Session Lifecycle
+    - Connection open = session start (SESSION_START event)
+    - Connection drop = session boundary (SESSION_END + Graph snapshot)
+    - JWT validated on connect (OIDC from Zitadel)
+    - Permissions loaded once at session start, cached for lifetime
+
+    ### Message Format (inbound)
+    Any text or binary WebSocket message.
+
+    ### Message Format (outbound)
+    ```json
+    {
+      "session": "op-<hex-id>",
+      "type": "ack",
+      "received": <byte-count>
+    }
+    ```
+
+    ### Error Codes
+    | Code | Meaning |
+    |------|---------|
+    | 4004 | Unknown path |
+
+---
+# ── Platform SDK MCP API ─────────────────────────────────────────────────────
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: platform-sdk-mcp-api
+  description: >
+    Model Context Protocol server exposing platform_sdk capabilities as tools
+    for AI agents — logging, metrics, secrets, vector search, inference,
+    health checks, and audit.
+  tags:
+    - mcp
+    - sdk
+    - genai
+spec:
+  type: mcp
+  owner: platform-team
+  lifecycle: production
+  system: dopejarmo
+  definition: |
+    ## Platform SDK MCP Tools
+
+    **Run:** `python -m platform_sdk.mcp_server`
+
+    | Tool | Description |
+    |------|-------------|
+    | `log_event` | Emit a structured log event |
+    | `emit_metric` | Record a Prometheus metric |
+    | `get_secret` | Retrieve a secret by key |
+    | `check_rate_limit` | Check/consume rate limit tokens |
+    | `query_vector` | Semantic search over vector store |
+    | `upsert_vector` | Insert/update vectors |
+    | `call_inference` | LLM completion via LiteLLM |
+    | `embed_text` | Generate embeddings |
+    | `check_health` | Platform health status |
+    | `audit_event` | Write an audit log entry |
+
+---
+# ── Ledger (immudb) ──────────────────────────────────────────────────────────
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: ledger-immudb
+  description: >
+    Append-only, hash-chained truth store. The sole source of truth for all
+    state in DoPeJarMo. Events are immutable once written. Provides native
+    Merkle tree tamper detection via immudb. Kernel connects via gRPC on :3322.
+  tags:
+    - immudb
+    - ledger
+    - dopejarmo
+    - database
+  links:
+    - url: https://immudb.io
+      title: immudb Documentation
+spec:
+  type: database
+  owner: user:ray-bruni
+  lifecycle: production
+  system: dopejarmo
+
+---
+# ── Zitadel (Identity + Authorization) ───────────────────────────────────────
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: zitadel-identity
+  description: >
+    External identity and authorization service (NORTH_STAR Q2). Provides
+    OIDC authentication for operator and user sessions, authorization API
+    for agent permissions, and JWT issuance validated by kernel on WebSocket
+    connect. Architecturally separate from the cognitive kernel.
+  tags:
+    - zitadel
+    - oidc
+    - identity
+    - authorization
+    - dopejarmo
+  links:
+    - url: http://localhost:8085/.well-known/openid-configuration
+      title: OIDC Discovery
+    - url: https://zitadel.com/docs
+      title: Zitadel Documentation
+spec:
+  type: identity-provider
+  owner: user:ray-bruni
+  lifecycle: production
+  system: dopejarmo
+
+---
+# ── Ollama (Local LLM) ───────────────────────────────────────────────────────
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: ollama-inference
+  description: >
+    Host-native local LLM for HO1 internal calls — Prompt Pack Inspection,
+    constrained JSON extraction, synthesis. Runs natively on macOS with Metal
+    GPU acceleration. Models: qwen2.5-coder:14b, qwen3-coder:30b.
+    NOT used for DoPeJar conversation (external APIs via Routing framework).
+  tags:
+    - ollama
+    - llm
+    - inference
+    - dopejarmo
+  links:
+    - url: http://localhost:11434
+      title: Ollama API
+spec:
+  type: ai-runtime
+  owner: user:ray-bruni
+  lifecycle: production
+  system: dopejarmo

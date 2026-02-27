@@ -7,6 +7,14 @@ metadata:
 spec:
   memberOf: [guests]
 ---
+apiVersion: backstage.io/v1alpha1
+kind: User
+metadata:
+  name: ray-bruni
+  description: DoPeJarMo architect and operator
+spec:
+  memberOf: [platform-team]
+---
 # https://backstage.io/docs/features/software-catalog/descriptor-format#kind-group
 apiVersion: backstage.io/v1alpha1
 kind: Group
@@ -15,3 +23,27 @@ metadata:
 spec:
   type: team
   children: []
+---
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: platform-team
+  description: DoPeJarMo platform engineering
+spec:
+  type: team
+  children: []
+  members: [ray-bruni]
+---
+# https://backstage.io/docs/features/software-catalog/descriptor-format#kind-system
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: dopejarmo
+  description: >
+    DoPeJarMo — governed cognitive OS. Nine primitives, event-sourced ledger,
+    framework hierarchy, and the DoPeJar personal AI companion.
+  tags:
+    - architecture
+    - dopejarmo
+spec:
+  owner: platform-team
