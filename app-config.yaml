@@ -78,16 +78,6 @@ catalog:
   rules:
     - allow: [Component, System, API, Resource, Location]
   locations:
-    # Local example data, file locations are relative to the backend process, typically `packages/backend`
-    - type: file
-      target: ../../examples/entities.yaml
-
-    # Local example template
-    - type: file
-      target: ../../examples/template/template.yaml
-      rules:
-        - allow: [Template]
-
     # Local example organizational data
     - type: file
       target: ../../examples/org.yaml
@@ -101,6 +91,10 @@ catalog:
     # Brain Factory — architecture authority docs + Sawmill templates
     - type: file
       target: ../../../Cowork/Brain_Factory/catalog-info.yaml
+
+    # DoPeJarMo system topology — kernel, APIs, infrastructure resources
+    - type: file
+      target: ../../catalog-info.yaml
 
     ## Uncomment these lines to add more example data
     # - type: url
