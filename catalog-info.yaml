@@ -1,4 +1,31 @@
 ---
+# ── Platform SDK ─────────────────────────────────────────────────────────────
+# DoPeJarMo platform SDK — 46 modules across 5 tiers.
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: platform-sdk
+  description: >
+    DoPeJarMo platform SDK — 46 modules across 5 tiers. Single import path
+    for all infrastructure concerns. Every framework imports from here.
+  annotations:
+    github.com/project-slug: rabruni/dopejar_sdk
+    backstage.io/techdocs-ref: dir:platform_sdk
+  tags:
+    - sdk
+    - python
+    - dopejarmo
+spec:
+  type: library
+  owner: user:ray-bruni
+  lifecycle: production
+  system: dopejarmo
+  dependsOn:
+    - resource:ledger-immudb
+    - resource:zitadel-identity
+    - resource:ollama-inference
+
+---
 # ── Kernel ───────────────────────────────────────────────────────────────────
 # The DoPeJarMo cognitive process. Contains all nine primitives.
 # WebSocket on :8080 — /operator (agent shell), /user (conversational AI).
