@@ -22,6 +22,8 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable
 
+from platform_sdk.tier0_core.config import get_config
+from platform_sdk.tier0_core.errors import LedgerConnectionError
 
 # ── Domain model ─────────────────────────────────────────────────────────────
 
@@ -175,24 +177,29 @@ class ImmudbProvider:
 
     def __init__(self) -> None:
         from immudb import ImmudbClient  # type: ignore[import]
-        from immudb.datatypesv2 import DatabaseSettingsV2  # type: ignore[import]
 
-        host = os.getenv("IMMUDB_HOST", "localhost")
-        port = int(os.getenv("IMMUDB_PORT", "3322"))
-        username = os.getenv("IMMUDB_USERNAME", "immudb")
-        password = os.getenv("IMMUDB_PASSWORD", "immudb")
-        database = os.getenv("IMMUDB_DATABASE", "defaultdb")
+        config = get_config()
+        host = config.immudb_host
+        port = config.immudb_port
+        username = config.immudb_username
+        password = config.immudb_password
+        database = config.immudb_database
 
-        self._client = ImmudbClient(f"{host}:{port}")
-        self._client.login(username, password)
-        if database != "defaultdb":
-            try:
-                self._client.createDatabaseV2(
-                    database, settings=DatabaseSettingsV2(), ifNotExists=True,
-                )
-            except Exception:
-                pass  # Older immudb versions or database already exists
-        self._client.useDatabase(database.encode())
+        try:
+            self._client = ImmudbClient(f"{host}:{port}")
+            self._client.login(username, password)
+            self._client.useDatabase(database.encode())
+        except Exception as exc:
+            raise LedgerConnectionError(
+                user_message="Ledger backend unavailable.",
+                detail=(
+                    f"Unable to connect to immudb at {host}:{port} "
+                    f"or select database {database!r}."
+                ),
+                host=host,
+                port=port,
+                database=database,
+            ) from exc
 
     def _entry_key(self, conversation_id: str, turn_index: int) -> bytes:
         return f"conv:{conversation_id}:{turn_index:08d}".encode()
@@ -524,7 +531,7 @@ async def verify_chain(conversation_id: str) -> tuple[bool, str]:
 
         ok, reason = await verify_chain("conv-abc123")
         if not ok:
-            raise IntegrityError(f"Ledger chain broken: {reason}")
+            print(f"Ledger chain broken: {reason}")
     """
     return await get_provider().verify_chain(conversation_id)
 

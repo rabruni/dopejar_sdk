@@ -121,6 +121,12 @@ class UpstreamError(PlatformError):
     code = "upstream_error"
 
 
+class LedgerConnectionError(UpstreamError):
+    """Ledger backend connection or database selection failure."""
+    status_code = 503
+    code = "ledger_connection_error"
+
+
 class ConfigurationError(PlatformError):
     """Misconfiguration detected at startup."""
     status_code = 500
@@ -177,7 +183,7 @@ __sdk_export__ = {
     "exports": [
         "PlatformError", "AuthError", "ValidationError", "NotFoundError",
         "ForbiddenError", "ConflictError", "RateLimitError", "UpstreamError",
-        "ConfigurationError",
+        "LedgerConnectionError", "ConfigurationError",
     ],
     "description": "Standard error taxonomy for all platform modules",
     "tier": "tier0_core",

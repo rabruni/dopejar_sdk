@@ -45,6 +45,7 @@ from platform_sdk.tier0_core.errors import (
     NotFoundError,
     ForbiddenError,
     ConflictError,
+    LedgerConnectionError,
 )
 
 # ── Config & secrets ──────────────────────────────────────────────────────────
@@ -100,6 +101,7 @@ __all__ = [
     "verify_token", "get_principal", "Principal",
     # errors (full set)
     "AuthError", "ValidationError", "NotFoundError", "ForbiddenError", "ConflictError",
+    "LedgerConnectionError",
     # config
     "get_config", "PlatformConfig",
     # secrets

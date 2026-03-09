@@ -14,7 +14,7 @@ from platform_sdk.service import get_session, verify_token, complete
 | Concern | Symbols | Module |
 |---------|---------|--------|
 | **Identity** | `verify_token`, `get_principal`, `Principal` | `tier0_core.identity` |
-| **Errors (full)** | `AuthError`, `ValidationError`, `NotFoundError`, `ForbiddenError`, `ConflictError` | `tier0_core.errors` |
+| **Errors (full)** | `AuthError`, `ValidationError`, `NotFoundError`, `ForbiddenError`, `ConflictError`, `LedgerConnectionError` | `tier0_core.errors` |
 | **Config** | `get_config`, `PlatformConfig` | `tier0_core.config` |
 | **Secrets** | `get_secret`, `SecretStr` | `tier0_core.secrets` |
 | **Data** | `get_session`, `get_engine` | `tier0_core.data` |

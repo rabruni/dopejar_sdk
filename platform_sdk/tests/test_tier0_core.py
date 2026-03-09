@@ -1,11 +1,15 @@
 """Tests for tier0_core modules."""
 from __future__ import annotations
 
+import sys
+import types
+
 import pytest
 
 from platform_sdk.tier0_core.errors import (
     AuthError,
     ConfigurationError,
+    LedgerConnectionError,
     NotFoundError,
     PlatformError,
     ValidationError,
@@ -40,6 +44,36 @@ class TestErrors:
     def test_configuration_error(self):
         e = ConfigurationError(user_message="Missing DATABASE_URL")
         assert isinstance(e, PlatformError)
+
+    def test_ledger_connection_error_on_database_selection_failure(self, monkeypatch):
+        from platform_sdk.tier0_core.config import _reset_config
+        from platform_sdk.tier0_core.ledger import ImmudbProvider
+
+        fake_immudb = types.ModuleType("immudb")
+
+        class FakeClient:
+            def __init__(self, address: str) -> None:
+                self.address = address
+
+            def login(self, username: str, password: str) -> None:
+                return None
+
+            def useDatabase(self, database: bytes) -> None:
+                raise RuntimeError("database missing")
+
+        fake_immudb.ImmudbClient = FakeClient
+
+        monkeypatch.setenv("IMMUDB_DATABASE", "missingdb")
+        monkeypatch.setitem(sys.modules, "immudb", fake_immudb)
+        _reset_config()
+
+        try:
+            with pytest.raises(LedgerConnectionError) as exc:
+                ImmudbProvider()
+            assert exc.value.code == "ledger_connection_error"
+            assert exc.value.metadata["database"] == "missingdb"
+        finally:
+            _reset_config()
 
 
 # ── http ───────────────────────────────────────────────────────────────────
@@ -224,6 +258,12 @@ class TestLedger:
 
     @pytest.mark.asyncio
     async def test_service_surface_exports_ledger(self):
-        from platform_sdk.service import append_turn, verify_chain, LedgerEntry
+        from platform_sdk.service import (
+            LedgerConnectionError,
+            LedgerEntry,
+            append_turn,
+            verify_chain,
+        )
         assert callable(append_turn)
         assert callable(verify_chain)
+        assert LedgerConnectionError.code == "ledger_connection_error"

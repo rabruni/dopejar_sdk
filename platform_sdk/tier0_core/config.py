@@ -10,9 +10,7 @@ Remote config:  PLATFORM_CONFIG_BACKEND=etcd|consul|none
 """
 from __future__ import annotations
 
-import os
 from functools import lru_cache
-from typing import Any
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -43,6 +41,13 @@ class PlatformConfig(BaseSettings):
     )
     database_pool_size: int = Field(default=5, alias="DATABASE_POOL_SIZE")
     database_max_overflow: int = Field(default=10, alias="DATABASE_MAX_OVERFLOW")
+
+    # ── Ledger / immudb ───────────────────────────────────────────────────────
+    immudb_host: str = Field(default="localhost", alias="IMMUDB_HOST")
+    immudb_port: int = Field(default=3322, alias="IMMUDB_PORT")
+    immudb_database: str = Field(default="defaultdb", alias="IMMUDB_DATABASE")
+    immudb_username: str = Field(default="immudb", alias="IMMUDB_USERNAME")
+    immudb_password: str = Field(default="immudb", alias="IMMUDB_PASSWORD")
 
     # ── Redis ─────────────────────────────────────────────────────────────────
     redis_url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")
