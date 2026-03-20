@@ -45,47 +45,15 @@ metadata:
     Connection drop = session boundary.
   tags:
     - websocket
+    - asyncapi
     - dopejarmo
 spec:
-  type: websocket
+  type: asyncapi
   owner: user:ray-bruni
   lifecycle: production
   system: dopejarmo
-  definition: |
-    ## Kernel WebSocket API
-
-    **Endpoint:** `ws://<host>:8080`
-
-    ### Paths
-
-    | Path | Purpose | Session Type |
-    |------|---------|-------------|
-    | `/operator` | DoPeJarMo interactive agent shell | Operator session |
-    | `/user` | DoPeJar conversational AI | User session |
-    | `/health` | Health check (returns JSON, then closes) | None |
-
-    ### Session Lifecycle
-    - Connection open = session start (SESSION_START event)
-    - Connection drop = session boundary (SESSION_END + Graph snapshot)
-    - JWT validated on connect (OIDC from Zitadel)
-    - Permissions loaded once at session start, cached for lifetime
-
-    ### Message Format (inbound)
-    Any text or binary WebSocket message.
-
-    ### Message Format (outbound)
-    ```json
-    {
-      "session": "op-<hex-id>",
-      "type": "ack",
-      "received": <byte-count>
-    }
-    ```
-
-    ### Error Codes
-    | Code | Meaning |
-    |------|---------|
-    | 4004 | Unknown path |
+  definition:
+    $text: apis/kernel-websocket.asyncapi.yaml
 
 ---
 # ── Platform SDK MCP API ─────────────────────────────────────────────────────
@@ -106,23 +74,8 @@ spec:
   owner: platform-team
   lifecycle: production
   system: dopejarmo
-  definition: |
-    ## Platform SDK MCP Tools
-
-    **Run:** `python -m platform_sdk.mcp_server`
-
-    | Tool | Description |
-    |------|-------------|
-    | `log_event` | Emit a structured log event |
-    | `emit_metric` | Record a Prometheus metric |
-    | `get_secret` | Retrieve a secret by key |
-    | `check_rate_limit` | Check/consume rate limit tokens |
-    | `query_vector` | Semantic search over vector store |
-    | `upsert_vector` | Insert/update vectors |
-    | `call_inference` | LLM completion via LiteLLM |
-    | `embed_text` | Generate embeddings |
-    | `check_health` | Platform health status |
-    | `audit_event` | Write an audit log entry |
+  definition:
+    $text: apis/platform-sdk-mcp.yaml
 
 ---
 # ── Ledger (immudb) ──────────────────────────────────────────────────────────

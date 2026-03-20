@@ -7,8 +7,6 @@ metadata:
     Provider-abstracted Python SDK for all platform concerns —
     identity, logging, inference, vector search, auth, data, metrics, and more.
     Two-surface architecture: agent surface for AI agents, service surface for backend services.
-  annotations:
-    backstage.io/techdocs-ref: dir:.
   tags:
     - python
     - sdk
@@ -19,6 +17,8 @@ spec:
   owner: platform-team
   lifecycle: production
   system: dopejarmo
+  providesApis:
+    - platform-sdk-mcp-api
   dependsOn:
     - resource:ledger-immudb
     - resource:zitadel-identity

@@ -1,0 +1,82 @@
+asyncapi: 2.6.0
+info:
+  title: DoPeJarMo Kernel WebSocket API
+  version: 1.0.0
+  description: >
+    DoPeJarMo session transport. Two WebSocket paths:
+    /operator for agent shell sessions, /user for conversational AI sessions.
+    Connection drop = session boundary.
+
+servers:
+  local:
+    url: ws://localhost:8080
+    protocol: ws
+
+channels:
+  /operator:
+    description: >
+      DoPeJarMo interactive agent shell. Operator sessions for agent-driven
+      work (sawmill runs, builds, audits). JWT validated on connect (OIDC from Zitadel).
+    subscribe:
+      message:
+        $ref: '#/components/messages/SessionAck'
+    publish:
+      message:
+        $ref: '#/components/messages/OperatorMessage'
+
+  /user:
+    description: >
+      DoPeJar conversational AI. User-facing sessions. JWT validated on connect.
+    subscribe:
+      message:
+        $ref: '#/components/messages/SessionAck'
+    publish:
+      message:
+        $ref: '#/components/messages/UserMessage'
+
+  /health:
+    description: >
+      Health check endpoint. Returns JSON status, then closes connection.
+    subscribe:
+      message:
+        $ref: '#/components/messages/HealthResponse'
+
+components:
+  messages:
+    SessionAck:
+      payload:
+        type: object
+        properties:
+          session:
+            type: string
+            description: Session ID (e.g. op-<hex-id>)
+          type:
+            type: string
+            enum: [ack]
+          received:
+            type: integer
+            description: Byte count received
+
+    OperatorMessage:
+      payload:
+        type: object
+        description: Any text or binary WebSocket message from the operator agent.
+
+    UserMessage:
+      payload:
+        type: object
+        description: Any text or binary WebSocket message from the user.
+
+    HealthResponse:
+      payload:
+        type: object
+        properties:
+          status:
+            type: string
+            enum: [healthy, degraded, unhealthy]
+
+  securitySchemes:
+    oidc:
+      type: openIdConnect
+      openIdConnectUrl: http://localhost:8085/.well-known/openid-configuration
+      description: JWT from Zitadel, validated on WebSocket connect.

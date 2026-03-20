@@ -1,0 +1,170 @@
+# Platform SDK MCP Tool Definitions
+# Machine-readable spec for all MCP tools exposed by platform_sdk.mcp_server
+# Agents query this via the Backstage catalog to discover available tools.
+#
+# Run: python -m platform_sdk.mcp_server
+
+mcp_version: "1.0"
+server:
+  name: platform-sdk-mcp
+  command: "python -m platform_sdk.mcp_server"
+
+tools:
+  - name: log_event
+    description: Emit a structured log event via platform_sdk logging
+    tier: tier0_core
+    module: logging
+    parameters:
+      - name: level
+        type: string
+        enum: [debug, info, warning, error]
+        default: info
+      - name: event
+        type: string
+        required: true
+      - name: data
+        type: object
+        required: false
+
+  - name: emit_metric
+    description: Record a platform metric (counter, gauge, or histogram)
+    tier: tier0_core
+    module: metrics
+    parameters:
+      - name: kind
+        type: string
+        enum: [counter, gauge, histogram]
+        required: true
+      - name: name
+        type: string
+        required: true
+      - name: value
+        type: number
+        default: 1
+      - name: labels
+        type: object
+        required: false
+
+  - name: get_secret
+    description: Retrieve a secret value by key. Returns confirmation only, raw value never exposed.
+    tier: tier0_core
+    module: secrets
+    parameters:
+      - name: key
+        type: string
+        required: true
+
+  - name: check_rate_limit
+    description: Check if a key is within rate limit. Returns allowed true/false.
+    tier: tier1_runtime
+    module: ratelimit
+    parameters:
+      - name: key
+        type: string
+        required: true
+      - name: limit
+        type: integer
+        required: true
+      - name: window_seconds
+        type: integer
+        default: 60
+
+  - name: query_vector
+    description: Similarity search in platform vector store. Query text auto-embedded.
+    tier: tier3_platform
+    module: vector
+    parameters:
+      - name: query
+        type: string
+        required: true
+      - name: collection
+        type: string
+        default: default
+      - name: top_k
+        type: integer
+        default: 5
+
+  - name: upsert_vector
+    description: Add or update a document in vector store. Text auto-embedded.
+    tier: tier3_platform
+    module: vector
+    parameters:
+      - name: id
+        type: string
+        required: true
+      - name: text
+        type: string
+        required: true
+      - name: collection
+        type: string
+        default: default
+      - name: metadata
+        type: object
+        required: false
+
+  - name: call_inference
+    description: LLM completion via configured inference provider
+    tier: tier4_advanced
+    module: inference
+    parameters:
+      - name: messages
+        type: array
+        items:
+          type: object
+          properties:
+            role: { type: string }
+            content: { type: string }
+        required: true
+      - name: model
+        type: string
+        required: false
+      - name: max_tokens
+        type: integer
+        default: 1024
+      - name: temperature
+        type: number
+        default: 0.7
+
+  - name: embed_text
+    description: Generate embeddings for text(s)
+    tier: tier4_advanced
+    module: inference
+    parameters:
+      - name: texts
+        type: array
+        items: { type: string }
+        required: true
+      - name: model
+        type: string
+        required: false
+
+  - name: check_health
+    description: Return platform health status (liveness + readiness)
+    tier: tier2_reliability
+    module: health
+    parameters: []
+
+  - name: audit_event
+    description: Record append-only audit event (GDPR Art. 30 / SOC 2)
+    tier: tier2_reliability
+    module: audit
+    parameters:
+      - name: actor_id
+        type: string
+        required: true
+      - name: action
+        type: string
+        required: true
+      - name: resource_type
+        type: string
+        required: true
+      - name: resource_id
+        type: string
+        required: true
+      - name: outcome
+        type: string
+        enum: [success, failure, denied]
+        default: success
+      - name: metadata
+        type: object
+        required: false

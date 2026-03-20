@@ -1,12 +1,4 @@
 ---
-# https://backstage.io/docs/features/software-catalog/descriptor-format#kind-user
-apiVersion: backstage.io/v1alpha1
-kind: User
-metadata:
-  name: guest
-spec:
-  memberOf: [guests]
----
 apiVersion: backstage.io/v1alpha1
 kind: User
 metadata:
@@ -14,15 +6,6 @@ metadata:
   description: DoPeJarMo architect and operator
 spec:
   memberOf: [platform-team]
----
-# https://backstage.io/docs/features/software-catalog/descriptor-format#kind-group
-apiVersion: backstage.io/v1alpha1
-kind: Group
-metadata:
-  name: guests
-spec:
-  type: team
-  children: []
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Group
@@ -34,7 +17,6 @@ spec:
   children: []
   members: [ray-bruni]
 ---
-# https://backstage.io/docs/features/software-catalog/descriptor-format#kind-system
 apiVersion: backstage.io/v1alpha1
 kind: System
 metadata:

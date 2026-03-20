@@ -1,0 +1,196 @@
+# Portal MCP Tool Definitions
+# Machine-readable spec for all MCP tools exposed by mcp_portal.py
+# Agents query this via the Backstage catalog to discover available tools.
+#
+# Run: python3 mcp_portal.py
+# Config: python3 mcp_portal.py --config portal_config.yaml
+
+mcp_version: "1.0"
+server:
+  name: portal-mcp
+  command: "python3 mcp_portal.py"
+  config_flag: "--config"
+
+tools:
+  - name: list_pipeline_runs
+    description: List recent pipeline/process runs with status, event count, and timestamps.
+    parameters:
+      - name: limit
+        type: integer
+        default: 20
+
+  - name: get_run_events
+    description: Get all execution events for a specific pipeline run.
+    parameters:
+      - name: framework
+        type: string
+        required: true
+        description: Framework or pipeline ID
+      - name: run_id
+        type: string
+        required: true
+
+  - name: get_run_trace
+    description: Get execution events as a parent-child trace tree for debugging.
+    parameters:
+      - name: framework
+        type: string
+        required: true
+      - name: run_id
+        type: string
+        required: true
+
+  - name: list_conversations
+    description: List recent agent conversations across CLIs.
+    parameters:
+      - name: cli
+        type: string
+        enum: [claude, codex, gemini]
+        required: false
+      - name: limit
+        type: integer
+        default: 30
+
+  - name: get_conversation
+    description: Get the full transcript of a conversation by file path.
+    parameters:
+      - name: path
+        type: string
+        required: true
+
+  - name: list_catalog_entities
+    description: List all system catalog entities (components, APIs, resources).
+    parameters: []
+
+  - name: get_api_spec
+    description: Get the full API specification for a named API from the catalog.
+    parameters:
+      - name: api_name
+        type: string
+        required: true
+
+  - name: browse_files
+    description: Browse directory contents relative to repo root.
+    parameters:
+      - name: path
+        type: string
+        default: ""
+
+  - name: read_file
+    description: Read a file's contents by relative path.
+    parameters:
+      - name: path
+        type: string
+        required: true
+
+  - name: get_recent_commits
+    description: Get recent git commits with hash, date, author, and subject.
+    parameters:
+      - name: limit
+        type: integer
+        default: 20
+
+  - name: get_working_changes
+    description: Get uncommitted changes in the working tree.
+    parameters: []
+
+  # ── Workspace tools ──────────────────────────────────────────────────
+  - name: post_to_workspace
+    description: Post a plan, result, review, prompt, or handoff to the shared workspace. Use reply_to to continue a conversation thread.
+    parameters:
+      - name: type
+        type: string
+        enum: [plan, results, review, prompt, handoff, question, context]
+        required: true
+      - name: to
+        type: string
+        required: true
+        description: Comma-separated recipient names
+      - name: summary
+        type: string
+        required: true
+      - name: content
+        type: string
+        required: true
+      - name: reply_to
+        type: string
+        required: false
+        description: ID of the item you are responding to (threads the conversation)
+      - name: tags
+        type: array
+        required: false
+
+  - name: get_workspace_items
+    description: List workspace items filtered by status, recipient, source, or type.
+    parameters:
+      - name: status
+        type: string
+        enum: [sent, read, complete]
+        required: false
+      - name: to
+        type: string
+        required: false
+      - name: from_cli
+        type: string
+        required: false
+      - name: type
+        type: string
+        required: false
+
+  - name: get_workspace_item
+    description: Get a workspace item by ID including full content.
+    parameters:
+      - name: id
+        type: string
+        required: true
+
+  - name: update_workspace_status
+    description: Update item status. Agents can set read. Only human can set complete.
+    parameters:
+      - name: id
+        type: string
+        required: true
+      - name: status
+        type: string
+        enum: [sent, read, complete]
+        required: true
+
+  - name: route_workspace_item
+    description: Route a workspace item to different recipients.
+    parameters:
+      - name: id
+        type: string
+        required: true
+      - name: to
+        type: string
+        required: true
+
+  - name: register_agent
+    description: Register an agent identity so it appears in workspace routing.
+    parameters:
+      - name: name
+        type: string
+        required: true
+      - name: cli
+        type: string
+        required: true
+      - name: description
+        type: string
+        required: true
+      - name: capabilities
+        type: array
+        required: false
+
+  - name: list_agents
+    description: List all registered agents with CLI, description, and capabilities.
+    parameters: []
+
+  - name: comment_on_workspace_item
+    description: Add a threaded reply to a workspace item (deprecated — use post_to_workspace with reply_to instead).
+    parameters:
+      - name: id
+        type: string
+        required: true
+      - name: text
+        type: string
+        required: true
