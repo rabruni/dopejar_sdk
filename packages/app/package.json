@@ -16,7 +16,7 @@
   "dependencies": {
     "@backstage/app-defaults": "^1.7.5",
     "@backstage/catalog-model": "^1.7.6",
-    "@backstage/cli": "^0.35.4",
+    "@backstage/cli": "patch:@backstage/cli@npm%3A0.35.4#~/.yarn/patches/@backstage-cli-npm-0.35.4-dfaee6d669.patch",
     "@backstage/core-app-api": "^1.19.5",
     "@backstage/core-components": "^0.18.7",
     "@backstage/core-plugin-api": "^1.12.3",
@@ -43,6 +43,7 @@
     "@backstage/ui": "^0.12.0",
     "@material-ui/core": "^4.12.2",
     "@material-ui/icons": "^4.9.1",
+    "backstage-plugin-techdocs-addon-mermaid": "^0.25.0",
     "react": "^18.0.2",
     "react-dom": "^18.0.2",
     "react-router": "^6.30.2",

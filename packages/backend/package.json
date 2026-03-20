@@ -42,14 +42,14 @@
     "@backstage/plugin-search-backend-module-techdocs": "^0.4.11",
     "@backstage/plugin-search-backend-node": "^1.4.1",
     "@backstage/plugin-signals-backend": "^0.3.12",
-    "@backstage/plugin-techdocs-backend": "^2.1.5",
+    "@backstage/plugin-techdocs-backend": "patch:@backstage/plugin-techdocs-backend@npm%3A2.1.5#~/.yarn/patches/@backstage-plugin-techdocs-backend-npm-2.1.5.patch",
     "app": "link:../app",
     "better-sqlite3": "^12.0.0",
     "node-gyp": "^10.0.0",
     "pg": "^8.11.3"
   },
   "devDependencies": {
-    "@backstage/cli": "^0.35.4"
+    "@backstage/cli": "patch:@backstage/cli@npm%3A0.35.4#~/.yarn/patches/@backstage-cli-npm-0.35.4-dfaee6d669.patch"
   },
   "files": [
     "dist"

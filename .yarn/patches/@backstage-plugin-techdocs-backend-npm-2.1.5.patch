@@ -1,0 +1,10 @@
+diff --git a/dist/plugin.cjs.js b/dist/plugin.cjs.js
+--- a/dist/plugin.cjs.js
++++ b/dist/plugin.cjs.js
+@@ -117,4 +117,4 @@
+         http.addAuthPolicy({
+-          path: "/static",
+-          allow: "user-cookie"
++          path: "/static/docs",
++          allow: "unauthenticated"
+         });
